@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Hero } from "./components/Hero.jsx";
+import { FaqSection } from "./components/FaqSection.jsx";
+import { ReviewsSection } from "./components/ReviewsSection.jsx";
 import { SiteHeader } from "./components/SiteHeader.jsx";
 import { SiteFooter } from "./components/SiteFooter.jsx";
 import {
@@ -50,7 +52,7 @@ export function App() {
           onPlan={openPlan}
         />
         <main id="main-content">
-          <Hero />
+          <Hero onPlan={openPlan} />
           <IntroSection />
           <DirectionsSection />
           <TerritorySection />
@@ -58,8 +60,10 @@ export function App() {
           <JourneySection onPlan={openPlan} />
           <NatureSection />
           <StaySection />
+          <ReviewsSection />
           <HistorySection />
           <TransparencySection />
+          <FaqSection />
           <ContactSection onPlan={openPlan} />
         </main>
         <SiteFooter />

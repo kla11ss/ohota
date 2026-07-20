@@ -4,13 +4,19 @@ import { useFocusTrap } from "../hooks/useFocusTrap.js";
 
 export function TripModal({ open, onClose }) {
   const [sent, setSent] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const modalRef = useRef(null);
   const nameRef = useRef(null);
   const successTitleRef = useRef(null);
   useFocusTrap(open, modalRef, onClose, nameRef);
 
   useEffect(() => {
-    if (!open) setSent(false);
+    if (!open) {
+      setSent(false);
+      setIsSubmitting(false);
+      setSubmitError("");
+    }
   }, [open]);
 
   useEffect(() => {
@@ -19,9 +25,35 @@ export function TripModal({ open, onClose }) {
 
   if (!open) return null;
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    setSent(true);
+    if (isSubmitting) return;
+
+    const form = event.currentTarget;
+    const values = Object.fromEntries(new FormData(form));
+
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const response = await fetch("/api/trip-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result.error || "Не удалось отправить запрос. Попробуйте ещё раз.");
+      }
+
+      form.reset();
+      setSent(true);
+    } catch (error) {
+      setSubmitError(error.message || "Не удалось отправить запрос. Попробуйте ещё раз.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -49,10 +81,10 @@ export function TripModal({ open, onClose }) {
           <div className="trip-success" aria-live="polite">
             <CheckCircle size={34} weight="light" />
             <p className="section-label section-label--light">Запрос сформирован</p>
-            <h2 id="trip-modal-title" ref={successTitleRef} tabIndex={-1}>Продолжим по телефону</h2>
+            <h2 id="trip-modal-title" ref={successTitleRef} tabIndex={-1}>Запрос уже у команды</h2>
             <p id="trip-modal-description">
-              Ничего не было отправлено или сохранено. Канал отправки формы ещё не подтверждён,
-              поэтому для передачи запроса позвоните по номеру исходного сайта.
+              Заявка отправлена ответственному менеджеру. Он свяжется с вами, чтобы согласовать
+              сезон, даты, программу и размещение.
             </p>
             <a className="pill-button pill-button--light" href="tel:+79200201516">
               <Phone size={17} weight="regular" /> +7 920 020-15-16
@@ -69,7 +101,7 @@ export function TripModal({ open, onClose }) {
               </p>
             </div>
 
-            <form className="trip-form" onSubmit={handleSubmit}>
+            <form className="trip-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
               <label>
                 <span>Как к вам обращаться</span>
                 <input ref={nameRef} name="name" type="text" autoComplete="name" placeholder="Имя" required />
@@ -103,12 +135,21 @@ export function TripModal({ open, onClose }) {
                 />
               </label>
 
+              <input
+                className="trip-form__honeypot"
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+              />
+
               <p className="form-note">
-                Отправка будет подключена после подтверждения канала связи. Сейчас форма
-                демонстрирует сценарий подготовки запроса.
+                Заявка поступит ответственному менеджеру в Telegram. Он уточнит детали по телефону.
               </p>
-              <button className="pill-button pill-button--light" type="submit">
-                Подготовить запрос <ArrowRight size={17} weight="regular" />
+              {submitError ? <p className="form-error" role="alert">{submitError}</p> : null}
+              <button className="pill-button pill-button--light" type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Отправляем…" : "Отправить запрос"} <ArrowRight size={17} weight="regular" />
               </button>
             </form>
           </>

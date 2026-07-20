@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowRight } from "@phosphor-icons/react";
 import { heroStories } from "../content.js";
 
-export function Hero() {
+export function Hero({ onPlan }) {
   return (
     <section className="hero" id="top" aria-labelledby="hero-title">
       <img
@@ -17,6 +17,9 @@ export function Hero() {
           «Великовское» — индивидуально согласуемые сценарии охоты, рыбалки, размещения и
           природного отдыха на левом берегу Волги.
         </p>
+        <button type="button" className="pill-button hero__cta" onClick={onPlan}>
+          Запланировать поездку <ArrowRight size={17} weight="regular" />
+        </button>
       </div>
 
       <span className="hero__image-note">Иллюстративное изображение</span>

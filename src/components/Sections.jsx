@@ -15,6 +15,7 @@ import {
   natureItems,
   stays,
 } from "../content.js";
+import { JourneyRoadmap } from "./JourneyRoadmap.jsx";
 
 function handleTabKey(event, items, activeId, onSelect, prefix) {
   const currentIndex = items.findIndex((item) => item.id === activeId);
@@ -38,7 +39,7 @@ export function IntroSection() {
       <h2 className="section-label" id="intro-title">О хозяйстве</h2>
       <p className="intro-statement">
         Здесь охота задумана как путешествие: подготовка, сопровождение, проживание и
-        время для тех, кто приехал вместе с вами — после подтверждения возможностей.
+        время для тех, кто приехал вместе с вами.
       </p>
       <div className="intro-notes">
         <p>
@@ -129,8 +130,8 @@ export function HuntingSection() {
           <h2 id="hunting-title">Охота</h2>
         </div>
         <p>
-          Формат, даты и допустимые способы определяются только после проверки актуальных
-          региональных правил и возможностей хозяйства.
+          Индивидуальный маршрут собирается из интересов группы, сопровождения и особенностей
+          сезона.
         </p>
       </div>
 
@@ -224,15 +225,7 @@ export function JourneySection({ onPlan }) {
           </button>
         </div>
 
-        <div className="journey-grid">
-          {journeySteps.map((step) => (
-            <article className="journey-step" key={step.number}>
-              <span>{step.number}</span>
-              <h3>{step.title}</h3>
-              <p>{step.text}</p>
-            </article>
-          ))}
-        </div>
+        <JourneyRoadmap items={journeySteps} onPlan={onPlan} />
       </div>
     </section>
   );
@@ -281,10 +274,6 @@ export function NatureSection() {
             ))}
           </div>
 
-          <p className="nature-disclaimer">
-            Виды рыбы, правила вылова, сезонные ограничения и доступность плавсредств
-            подтверждаются перед поездкой. Гарантированный улов не обещается.
-          </p>
         </div>
       </div>
     </section>
@@ -303,8 +292,7 @@ export function StaySection() {
           <h2 id="stay-title">Вернуться в тёплый дом</h2>
         </div>
         <p>
-          Ниже — состав объектов по материалам исходного сайта, а не подтверждённое на
-          сегодня предложение.
+          Выберите формат, который подойдёт вашей группе, — детали соберём в одном запросе.
         </p>
       </div>
 
@@ -388,11 +376,11 @@ export function TransparencySection() {
   return (
     <section className="transparency page-shell" id="transparency" aria-labelledby="transparency-title">
       <div className="transparency__intro">
-        <p className="section-label">До публикации и до поездки</p>
-        <h2 id="transparency-title">Сначала уточняем факты</h2>
+        <p className="section-label">Важно перед поездкой</p>
+        <h2 id="transparency-title">Что согласуем заранее</h2>
         <p>
-          Архивные цены, сроки, статистика животных и правила не выдаются за актуальные.
-          Каждая поездка формируется только после подтверждения условий.
+          Сезон, правила, размещение и программа зависят от даты и состава группы. Соберём
+          все актуальные условия в одном ответе до поездки.
         </p>
       </div>
 
@@ -439,6 +427,30 @@ export function ContactSection({ onPlan }) {
           </a>
         </div>
       </div>
+
+      <section className="contact-map" aria-labelledby="contact-map-title">
+        <div className="contact-map__header">
+          <div>
+            <p className="section-label">Как добраться</p>
+            <h2 id="contact-map-title">Великовское на карте</h2>
+          </div>
+          <a
+            className="pill-button contact-map__link"
+            href="https://yandex.ru/maps/org/okhotkhozyaystvo_velikovskoye/240564135810/?ll=45.363507%2C56.117931&z=14"
+          >
+            <MapPin size={17} weight="regular" /> Открыть в Яндекс Картах
+          </a>
+        </div>
+
+        <div className="contact-map__frame">
+          <iframe
+            title="Охотхозяйство Великовское на Яндекс Картах"
+            src="https://yandex.ru/map-widget/v1/?ll=45.352273%2C56.112002&z=13&pt=45.352273%2C56.112002%2Cpm2rdm"
+            loading="lazy"
+            allowFullScreen
+          />
+        </div>
+      </section>
     </section>
   );
 }
