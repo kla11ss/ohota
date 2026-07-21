@@ -1,6 +1,9 @@
 node_modules/
 dist/
 tmp/
+.netlify/
+qa-artifacts/
 .env
 .env.*
+..env.tmp-*
 !.env.example

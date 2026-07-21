@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 const focusableSelector = [
   "a[href]",
@@ -10,11 +10,24 @@ const focusableSelector = [
 ].join(",");
 
 export function useFocusTrap(active, containerRef, onEscape, initialFocusRef) {
+  const previousFocusRef = useRef(null);
+
+  useEffect(() => {
+    if (!active) return undefined;
+
+    previousFocusRef.current = document.activeElement;
+
+    return () => {
+      const previousFocus = previousFocusRef.current;
+      previousFocusRef.current = null;
+      window.requestAnimationFrame(() => previousFocus?.focus?.());
+    };
+  }, [active]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!active || !container) return undefined;
 
-    const previousFocus = document.activeElement;
     const getFocusable = () =>
       Array.from(container.querySelectorAll(focusableSelector)).filter(
         (element) => element.offsetParent !== null && element.getAttribute("aria-hidden") !== "true",
@@ -54,7 +67,6 @@ export function useFocusTrap(active, containerRef, onEscape, initialFocusRef) {
     return () => {
       window.cancelAnimationFrame(focusFrame);
       document.removeEventListener("keydown", handleKeyDown);
-      window.requestAnimationFrame(() => previousFocus?.focus?.());
     };
   }, [active, containerRef, initialFocusRef, onEscape]);
 }

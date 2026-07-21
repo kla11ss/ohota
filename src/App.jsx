@@ -21,6 +21,8 @@ import { TripModal } from "./components/TripModal.jsx";
 export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
+  const [planView, setPlanView] = useState("trip");
+  const [planStayId, setPlanStayId] = useState("hotel-room");
   const shellRef = useRef(null);
 
   useEffect(() => {
@@ -38,6 +40,13 @@ export function App() {
   const toggleMenu = useCallback(() => setMenuOpen((value) => !value), []);
   const openPlan = useCallback(() => {
     setMenuOpen(false);
+    setPlanView("trip");
+    setPlanOpen(true);
+  }, []);
+  const openStayPlan = useCallback((stayId = "hotel-room") => {
+    setMenuOpen(false);
+    setPlanStayId(stayId);
+    setPlanView("stay");
     setPlanOpen(true);
   }, []);
 
@@ -59,7 +68,7 @@ export function App() {
           <HuntingSection />
           <JourneySection onPlan={openPlan} />
           <NatureSection />
-          <StaySection />
+          <StaySection onBook={openStayPlan} />
           <ReviewsSection />
           <HistorySection />
           <TransparencySection />
@@ -68,7 +77,12 @@ export function App() {
         </main>
         <SiteFooter />
       </div>
-      <TripModal open={planOpen} onClose={closePlan} />
+      <TripModal
+        open={planOpen}
+        initialView={planView}
+        initialStayId={planStayId}
+        onClose={closePlan}
+      />
     </>
   );
 }

@@ -1,0 +1,54 @@
+[build]
+  command = "pnpm build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# A custom Functions region such as `fra` requires Netlify Pro or Enterprise.
+# Keeping the platform default makes this configuration deployable on Free.
+
+[[redirects]]
+  from = "/api/booking-request"
+  to = "/.netlify/functions/booking-request"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/availability/check"
+  to = "/.netlify/functions/availability-check"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/availability-check"
+  to = "/.netlify/functions/availability-check"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/availability"
+  to = "/.netlify/functions/availability"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/telegram-webhook"
+  to = "/.netlify/functions/telegram-webhook"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/trip-request"
+  to = "/.netlify/functions/trip-request"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

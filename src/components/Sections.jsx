@@ -1,12 +1,14 @@
 import { useState } from "react";
 import {
   ArrowRight,
+  CalendarBlank,
   CaretDown,
   CheckCircle,
   MapPin,
   Phone,
   ShieldCheck,
 } from "@phosphor-icons/react";
+import { formatRubles, getStayById } from "../booking/catalog.js";
 import {
   confirmationItems,
   directions,
@@ -280,9 +282,14 @@ export function NatureSection() {
   );
 }
 
-export function StaySection() {
+export function StaySection({ onBook }) {
   const [activeStay, setActiveStay] = useState(stays[0].id);
   const stay = stays.find((item) => item.id === activeStay) ?? stays[0];
+  const bookingStay = getStayById(stay.id);
+  const price = bookingStay?.pricePerNight == null
+    ? "X ₽"
+    : formatRubles(bookingStay.pricePerNight);
+  const priceUnit = stay.id === "hotel-room" ? "за номер / сутки" : "за объект / сутки";
 
   return (
     <section className="stay-section" id="stay" aria-labelledby="stay-title">
@@ -332,12 +339,21 @@ export function StaySection() {
             id="stay-panel"
             aria-labelledby={`stay-tab-${activeStay}`}
           >
-            <span className="stay-detail__status">Архивное описание</span>
+            <span className="stay-detail__status">Вариант размещения</span>
             <h3>{stay.stat}</h3>
             <p>{stay.text}</p>
             <div className="stay-detail__note">
               <CheckCircle size={18} weight="regular" />
               <span>{stay.note}</span>
+            </div>
+            <div className="stay-detail__booking">
+              <div>
+                <span>Ориентировочная стоимость</span>
+                <strong>{price} <small>{priceUnit}</small></strong>
+              </div>
+              <button className="pill-button" type="button" onClick={() => onBook?.(stay.id)}>
+                <CalendarBlank size={17} weight="regular" /> Выбрать даты
+              </button>
             </div>
           </article>
         </div>

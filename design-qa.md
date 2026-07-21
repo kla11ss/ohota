@@ -1,62 +1,129 @@
-# Design QA — «Великовское»
+# Design QA — бронирование размещения
 
-## Visual truth and implementation
+## Цель и доказательства
 
-- Reference: `C:/Users/ОЛЕГ!/Downloads/Telegram Desktop/screenshot-56c5c31b-df91-4ad6-9b8a-ee65789b2021.png`
-- Reference native size: `1920 × 11935`; reference first viewport: `1920 × 1080`.
-- Implementation: `http://localhost:4173/`
-- Native implementation first viewport: `qa/screenshots/native-hero-final.png` at `1920 × 1080`.
-- Direct first-screen comparison: `qa/hero-comparison-final.jpg`.
-- Long-page section comparison: `qa/full-view-montage-final.jpg`.
-- Mobile evidence: `qa/screenshots/mobile-hero-final.png`, `mobile-directions-final.png`, `mobile-hunting-final.png`, `mobile-contact-final.png`, `mobile-menu-final.png`, `mobile-modal-final.png` at `390 × 844`.
+- Source visual truth: переданный пользователем референсный скриншот и механика `https://yuhro.ru/uslugi/rybalka`.
+- Browser-rendered implementation: `http://127.0.0.1:5173/#stay`.
+- Основной desktop-снимок: `qa-artifacts/booking-desktop-1709x939.png`.
+- Основной mobile-снимок: `qa-artifacts/booking-mobile-390x844.png`.
+- Success-состояние: `qa-artifacts/booking-success-mobile-390x844.png`.
+- Desktop viewport/state: `1709×939`, страница «Размещение», двухместный номер, диапазон 22–24 июля 2026 года, прокрутка к двухмесячному календарю.
+- Mobile viewport/state: `390×844`, тот же диапазон, один видимый месяц, липкая навигация и доступная кнопка закрытия.
 
-The source reference, the latest native implementation screenshot, the direct side-by-side comparison, and the long-page montage were inspected with `view_image`. The page was also rendered and exercised in the Codex in-app Browser.
+Полноэкранное сравнение выполнено в одном визуальном вводе при одинаковом desktop viewport `1709×939`: исходный скриншот и браузерный снимок реализации. Дополнительное сфокусированное сравнение выполнено для календарной панели и выбранного диапазона; отдельный кроп не потребовался, потому что числа, цены и состояния дат читаются на сохранённом desktop-снимке. Mobile-снимок использован для отдельной проверки адаптивной структуры.
 
-## Comparison points
+## Findings
 
-1. The hero keeps the reference composition: full-bleed moody forest, short editorial copy at left, compact dark story cluster at right, a small menu pill in the upper-right corner, and an oversized thin wordmark at the bottom.
-2. The implementation preserves the reference cadence of expansive white editorial sections interrupted by full-bleed dark or photographic sections.
-3. The type hierarchy follows the reference: very large light-weight display headlines, compact uppercase labels, restrained serif editorial copy, and micro-copy for captions and caveats.
-4. Components use the supplied design-system language: flat surfaces, hairline dividers, 8 px image/card radii, pill actions, no shadows, and the Ink/Paper/Mist/Pine/Ember palette.
-5. Direction rows retain the reference's numbered editorial grid and right-aligned photographic media; the hunting, nature, and accommodation sections repeat the same disciplined split-layout rhythm.
-6. The final CTA pair now matches the reference more closely: a quiet pale card beside a photo-dominant card with overlaid white copy, followed by an oversized footer wordmark.
-7. Long-page heights are closely aligned: the source is 11935 px and the implementation measured 11876 px at the native desktop viewport.
+- Открытых P0/P1/P2 расхождений нет.
+- Механика референса сохранена: два месяца на широком экране, цены в будущих датах, недоступные прошедшие дни и контрастный выбранный диапазон. Отличия в верхней части намеренные: вместо формы мгновенного поиска реализация сначала показывает каталог вариантов и подчёркивает, что это запрос на подтверждение.
 
-## Above-the-fold copy difference
+## Обязательные поверхности fidelity
 
-The reference's investment-company copy (`Aker invests...`, `The Creative`, `Our team`, `Contact`, `Locations`, `Careers`, `AKER`) is intentionally replaced with content from the supplied hunting-estate materials: the Zavolzhye location, an individually agreed trip proposition, three trip directions, the scroll cue, an illustrative-image disclosure, and the `ВЕЛИКОВСКОЕ` wordmark. The structural positions and hierarchy are preserved; the words are domain-specific rather than copied from Aker.
+- Fonts and typography: интерфейс и календарь используют Montserrat с весами 300–600; заголовки, подписи, цены и мобильные переносы сохраняют иерархию текущего сайта. После первичной проверки календарные числа и названия месяцев приведены к Montserrat.
+- Spacing and layout rhythm: desktop-диалог ограничен по ширине и прокручивается внутри; карточки, календарь и сводка имеют последовательные отступы и радиусы. На `390×844` сетки складываются в одну колонку без горизонтального переполнения.
+- Colors and visual tokens: использованы существующие `--color-pine`, `--color-midnight`, `--color-ember`, белый и молочный фон. Выбранные даты и варианты читаются без отхода от палитры сайта.
+- Image quality and asset fidelity: новый сценарий не требует декоративных изображений; существующие фотографии сайта не заменялись. Все интерфейсные символы взяты из используемого проектом набора Phosphor Icons, CSS/текстовые подделки ассетов не добавлялись.
+- Copy and content: везде используется формулировка запроса на подтверждение, а не обещание свободной квоты; телефон обязателен, известные тарифы и временный `X ₽/сутки` показаны последовательно.
 
-## Findings fixed during QA
+## Comparison history
 
-- Removed the extra fixed brand badge from lower sections.
-- Changed the right contact card from a split black/photo card to a photo-dominant composition matching the reference.
-- Added visible disclosure that generated photography is illustrative.
-- Reworded unverified services, accommodation, hunting formats, and trip steps so they are not presented as guaranteed current offers.
-- Preserved the explicit no-guarantee language for trophy and catch, and kept 1673 as the company's unverified historical version.
-- Added focus traps, Escape handling, focus restoration, and `inert` background handling to the menu and request dialog.
-- Added complete ARIA relationships and arrow-key navigation to tabs; disclosures now expose `aria-expanded` and controlled regions.
-- Added a skip link and a proper heading for the introductory section.
-- Increased small-text contrast, restored strong form focus rings, and increased mobile touch targets.
-- Converted large PNGs to optimized WebP assets and introduced small story-card thumbnails; the hero is about 213 KB instead of about 2.5 MB.
+### Итерация 1
 
-## Browser verification
+- [P2] При прокрутке длинного диалога кнопка закрытия уходила за верхнюю границу.
+- До исправления: `qa-artifacts/booking-desktop-pass1-before-close-fix-1709x939.png`.
+- Исправление: `.modal-close` переведена в липкое позиционирование над липкой панелью «Поездка / Размещение».
+- После исправления: `qa-artifacts/booking-desktop-1709x939.png`; кнопка остаётся видимой при прокрутке календаря.
 
-- Desktop/native: `1920 × 1080`; no horizontal document overflow (`scrollWidth = clientWidth = 1905`, excluding the browser scrollbar).
-- Mobile: `390 × 844`; no document overflow (`scrollWidth = clientWidth = 375`, excluding the browser scrollbar). The horizontal story rail is intentionally scrollable inside its own container.
-- Menu: opens, traps focus, marks the page inert, closes with Escape, and restores focus to `Меню`.
-- Hunting tabs: arrow-key navigation selects `Птица и малая дичь`; the first disclosure updates and exposes its content.
-- Nature disclosures and accommodation tabs update their visible and ARIA states.
-- Request path: opens from `Составить запрос`, focuses the name input, accepts realistic mock data, changes the interest selection, reaches the honest local success state, closes with Escape, and restores focus to the initiating CTA.
-- Browser console: no warnings or errors.
-- Production build: passed with Vite 6.4.2.
+### Итерация 2
 
-## Intentional deviations
+- [P2] Программный фокус на заголовке success-состояния рисовал крупную оранжевую рамку вокруг текста.
+- До исправления: `qa-artifacts/booking-success-pass1-focus-before-fix-390x844.png`.
+- Исправление: для программно фокусируемого заголовка с `tabIndex=-1` убрана декоративная рамка; сам перевод фокуса для скринридера сохранён.
+- После исправления: `qa-artifacts/booking-success-mobile-390x844.png`.
 
-- The investment map, team section, and financial metrics are replaced with territory, trip organization, accommodation, historical context, and confirmation checks because no verified map coordinates, team roster, current animal counts, or commercial statistics were supplied.
-- Proxima Nova was not supplied; Montserrat is used for the geometric display system and Lora for editorial body accents.
-- The request form is a local prototype and explicitly states that it does not send or save data. The confirmed phone number remains the only real contact action.
-- Photos are generated art-directed illustrations, visibly labeled as such, not claimed as documentary photography of the estate.
+## Проверенные взаимодействия
 
-No actionable P0, P1, or P2 visual, responsive, interaction, accessibility, or content-truth issues remain.
+- Вход из блока размещения и из формы «Запланировать поездку».
+- Предвыбор конкретного варианта (проверен коттедж) при входе из блока размещения.
+- Переключатель «Поездка / Размещение» и сохранение введённого состояния при переключении.
+- Диапазон 22–24 июля, две ночи, два номера и итог `26 000 ₽`.
+- Последовательные клики по более поздним датам продлевают выбранный диапазон; проверен период 22–27 июля на пять ночей.
+- Два дома охотника и состояние «Итог уточняется».
+- Ограничение вместимости и обязательность телефона.
+- Клавиши Arrow в календаре, удержание фокуса внутри диалога, Escape и возврат фокуса на исходную CTA.
+- Success-состояние проверено через honeypot-ответ, который намеренно не вызывает Telegram; серверные success/error ветки отдельно проверены с injected fetch.
+- На `390×844` отображается один месяц; `documentElement` и диалог имеют `scrollWidth === clientWidth`.
+- После чистой перезагрузки и финальных взаимодействий ошибок и предупреждений в консоли нет.
+
+## Автоматические проверки
+
+- `node --test`: 23/23 тестов пройдено.
+- `vite build`: production-сборка успешна, 4 589 модулей преобразовано.
+- Реальная отправка в Telegram намеренно не выполнялась; тесты используют внедрённый transport и не требуют секретов.
+
+## Open Questions
+
+- Нет. `X ₽/сутки` остаётся единственным согласованным временным значением и меняется одной константой каталога.
+
+## Implementation Checklist
+
+- [x] Общий каталог на клиенте и сервере.
+- [x] Каноническая серверная валидация и расчёт.
+- [x] Два входа в единый диалог.
+- [x] Desktop/mobile календарь и клавиатурные состояния.
+- [x] Сводка, контакты, ошибки и success-состояние.
+- [x] Production build, unit tests, browser QA и design QA.
+
+## Follow-up Polish
+
+- После утверждения тарифа заменить только `HUNTER_HOUSE_PRICE_PER_NIGHT`; визуальных блокирующих доработок не осталось.
 
 final result: passed
+
+---
+
+## Telegram и подтверждённая занятость — 21 июля 2026
+
+### Реализовано
+
+- Новая заявка сохраняется в Postgres без телефона, имени и комментария и отправляется с полными контактами только в тему Telegram «Новые заявки».
+- Кнопки «Подтвердить», «Отклонить» и «Отменить бронь» защищены секретом webhook, ID группы, тем и разрешённых менеджеров; повторные Telegram updates обрабатываются идемпотентно.
+- Подтверждение атомарно закрепляет одни и те же физические единицы на весь интервал `[заезд, выезд)`; конфликтующая заявка остаётся ожидающей. Отмена удаляет интервалы занятости.
+- Публичный календарь получает только обезличенный остаток: шесть гостиничных номеров агрегируются в количество, коттедж и два дома проверяются отдельно.
+- Перед отправкой выбранный диапазон проверяется повторно; ошибки базы или Telegram не очищают форму и показывают телефон хозяйства.
+
+### Browser QA
+
+- Desktop `1440×900`: два месяца видимы одновременно; `documentElement`, диалог и календарь имеют `scrollWidth === clientWidth`.
+- Mobile `390×844`: виден один месяц; `documentElement`, диалог и календарь имеют `scrollWidth === clientWidth`, горизонтального переполнения нет.
+- Диапазон 22–27 июля 2026 года выбран как 5 ночей, включая все промежуточные даты; итог для одного номера — `32 500 ₽`.
+- ArrowRight переводит фокус с 27 на 28 июля; Escape закрывает диалог и возвращает фокус на исходную кнопку «Выбрать даты».
+- При локально отсутствующих Telegram-секретах форма сохраняет телефон и диапазон, остаётся открытой и показывает `+7 920 020-15-16`.
+- После взаимодействий ошибок и предупреждений в консоли нет. Открытых P0/P1/P2 расхождений нет.
+
+### Автоматические проверки
+
+- `node --test`: 101/101 тест пройден, включая длинные диапазоны, checkout-границу, rollover московской полуночи, конкурентное подтверждение, шесть номеров, дома, коттедж, отмену, Telegram topics/security/idempotency, автоматическое создание четырёх тем, запрет публичной manager-группы, Netlify-адаптеры, fail-closed server secrets, атомарный rate limit и отсутствие PII/внутренних ID номеров в публичном API.
+- `pnpm build`: production-сборка успешна, 4 590 модулей преобразовано.
+- `git diff --check`: ошибок нет; только уведомления Git о будущей нормализации CRLF.
+- PostgreSQL-миграция и least-privilege скрипт роли `booking_app` синтаксически разобраны PostgreSQL parser: 73 и 52 выражения соответственно. Реальные Neon и Telegram Bot API не вызывались, потому что production-реквизиты в локальной среде отсутствуют.
+
+### Netlify / Neon / Telegram setup
+
+- Добавлены Netlify Function-адаптеры для пяти публичных `/api/*` маршрутов, потоковый лимит тела 12 КиБ, доверенный `context.ip`, `Cache-Control: no-store`, Node 22 и SPA fallback.
+- Добавлены Neon-совместимая миграция, SQL-роль `booking_app` без DDL-прав и инструкция по применению через прямое соединение с последующим использованием pooled runtime URL.
+- Setup-скрипт проверяет владельца супергруппы и права бота, идемпотентно создаёт темы «Новые заявки», «Подтверждённые», «Архив» и «Запросы на поездку», сохраняет ID без печати секретов и регистрирует callback-only webhook.
+- Frankfurt закреплён для Neon. Регион Netlify Functions намеренно не задан: на Netlify Free пользовательский выбор региона недоступен.
+- Реальный production smoke test ожидает внешней настройки: входа в Netlify и Neon, создания Telegram-супергруппы, отправки `/setup`, добавления server-only переменных и первого deploy. Это не влияет на результат локальных автоматических и браузерных проверок, но остаётся обязательным перед приёмкой production-контура.
+
+### Независимое ревью
+
+- Setup отклоняет публичную Telegram-супергруппу до сохранения секретов и создания тем; слабые и примерные webhook/rate-limit secrets не принимаются, а примерные значения автоматически заменяются криптографически случайными.
+- Временная атомарная запись `.env` использует игнорируемое имя `.env.tmp-*`; даже аварийно оставшийся файл не попадёт в `git add`. Абсолютные локальные пути удалены из отслеживаемых конфигураций и QA-отчёта.
+- Закрыта гонка параллельных отправок: слот rate limit резервируется атомарно до Telegram и освобождается по одноразовому токену при неуспехе; HMAC ротируется ежедневно, учитывает соседние поколения на границе суток и очищается пакетно.
+- При успешной отправке в Telegram и последующем сбое записи message ID выполняется best-effort удаление сообщения, а API возвращает контролируемую ошибку без очистки формы.
+- Перенос сообщения между Telegram-темами защищён отдельным CAS-claim: два разных callback update создают ровно одну копию; незавершённые updates возвращают retryable `503` и восстанавливаются после lease.
+- Неизменённый сетевой повтор сохраняет `requestKey`; изменение телефона, дат или состава после ошибки создаёт новый ключ.
+- Клиент и сервер используют одну дату «сегодня» в `Europe/Moscow`; открытый календарь автоматически пересчитывает окно в московскую полночь.
+
+final result: local implementation passed; production smoke pending external account and Telegram group setup

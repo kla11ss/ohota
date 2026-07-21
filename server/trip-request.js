@@ -1,3 +1,5 @@
+import { parseTopicId, sendTopicMessage } from "./telegram.js";
+
 const interestLabels = {
   hunt: "Охота",
   fishing: "Рыбалка",
@@ -70,31 +72,23 @@ export function formatTripRequest(request) {
   return rows.join("\n");
 }
 
-export async function sendTripRequest(request, environment = process.env) {
-  const token = environment.TELEGRAM_BOT_TOKEN;
-  const chatId = environment.TELEGRAM_CHAT_ID;
-
-  if (!token || !chatId) {
-    throw new Error("TELEGRAM_NOT_CONFIGURED");
-  }
-
-  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text: formatTripRequest(request),
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("TELEGRAM_DELIVERY_FAILED");
-  }
+export async function sendTripRequest(
+  request,
+  environment = process.env,
+  fetchImpl = fetch,
+) {
+  const topicId = parseTopicId(
+    environment.TELEGRAM_TRIP_TOPIC_ID,
+    "TELEGRAM_TRIP_TOPIC_ID",
+  );
+  return sendTopicMessage({
+    text: formatTripRequest(request),
+    topicId,
+    parseMode: "HTML",
+  }, environment, fetchImpl);
 }
 
-export async function processTripRequest(payload, environment = process.env) {
+export async function processTripRequest(payload, environment = process.env, options = {}) {
   const validation = validateTripRequest(payload);
 
   if (!validation.ok) {
@@ -106,7 +100,15 @@ export async function processTripRequest(payload, environment = process.env) {
   }
 
   try {
-    await sendTripRequest(validation.request, environment);
+    if (options.sendTripRequest) {
+      await options.sendTripRequest(validation.request, environment);
+    } else {
+      await sendTripRequest(
+        validation.request,
+        environment,
+        options.fetchImpl ?? fetch,
+      );
+    }
     return { ok: true, status: 200, body: { ok: true } };
   } catch (error) {
     const errorMessage = error.message === "TELEGRAM_NOT_CONFIGURED"
