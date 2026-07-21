@@ -374,10 +374,29 @@ function configurationError(error) {
   return error?.message === DATABASE_NOT_CONFIGURED || error?.message === "BOOKING_DATABASE_NOT_CONFIGURED";
 }
 
-function logDatabaseFailure(stage, error) {
+function databaseErrorCategory(error) {
+  const message = typeof error?.message === "string" ? error.message : "";
+  if (/row-level security policy/i.test(message)) return "row-level-security";
+  if (/permission denied for table/i.test(message)) return "table-permission";
+  if (/permission denied for sequence/i.test(message)) return "sequence-permission";
+  if (/permission denied for (?:schema|database)/i.test(message)) return "namespace-permission";
+  if (/permission denied for function/i.test(message)) return "function-permission";
+  return "other";
+}
+
+function logDatabaseFailure(stage, error, environment) {
+  let configuredRole = "unparseable";
+  try {
+    configuredRole = new URL(environment.DATABASE_URL).username || "missing";
+  } catch {
+    // The public response already handles invalid configuration without
+    // exposing the connection string.
+  }
   const detail = {
     stage,
     code: typeof error?.code === "string" ? error.code.slice(0, 32) : "unknown",
+    category: databaseErrorCategory(error),
+    configuredRole: configuredRole.slice(0, 64),
     constraint: typeof error?.constraint_name === "string"
       ? error.constraint_name.slice(0, 100)
       : null,
@@ -449,7 +468,7 @@ export async function processBookingRequest(payload, environment = process.env, 
     databaseStage = "create-request";
     stored = await repository.createOrGetRequest(metadata);
   } catch (error) {
-    logDatabaseFailure(databaseStage, error);
+    logDatabaseFailure(databaseStage, error, environment);
     return {
       ok: false,
       status: 503,
