@@ -374,6 +374,18 @@ function configurationError(error) {
   return error?.message === DATABASE_NOT_CONFIGURED || error?.message === "BOOKING_DATABASE_NOT_CONFIGURED";
 }
 
+function logDatabaseFailure(stage, error) {
+  const detail = {
+    stage,
+    code: typeof error?.code === "string" ? error.code.slice(0, 32) : "unknown",
+    constraint: typeof error?.constraint_name === "string"
+      ? error.constraint_name.slice(0, 100)
+      : null,
+    routine: typeof error?.routine === "string" ? error.routine.slice(0, 100) : null,
+  };
+  console.error("[booking-request] Database operation failed", detail);
+}
+
 export async function processBookingRequest(payload, environment = process.env, options = {}) {
   const validation = validateBookingRequest(payload, options.today);
   if (!validation.ok) return { ok: false, status: 400, body: { error: validation.error } };
@@ -396,6 +408,7 @@ export async function processBookingRequest(payload, environment = process.env, 
 
   const metadata = bookingMetadata(validation.request, createRequestId());
   let stored;
+  let databaseStage = "find-existing-request";
   try {
     const existing = await repository.getRequestByRequestKey(validation.request.requestKey);
     if (existing) {
@@ -418,6 +431,7 @@ export async function processBookingRequest(payload, environment = process.env, 
       }
     }
 
+    databaseStage = "check-availability";
     const availability = await repository.checkAvailability({
       stayId: validation.request.stayId,
       unitCount: validation.request.unitCount,
@@ -432,8 +446,10 @@ export async function processBookingRequest(payload, environment = process.env, 
         body: { error: "Выбранные даты уже заняты. Обновите календарь и выберите другой период." },
       };
     }
+    databaseStage = "create-request";
     stored = await repository.createOrGetRequest(metadata);
-  } catch {
+  } catch (error) {
+    logDatabaseFailure(databaseStage, error);
     return {
       ok: false,
       status: 503,
