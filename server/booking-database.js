@@ -10,6 +10,16 @@ function asNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function asIsoDate(value) {
+  if (value instanceof Date && Number.isFinite(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  const text = String(value ?? "");
+  const isoDate = /^\d{4}-\d{2}-\d{2}/.exec(text);
+  return isoDate?.[0] ?? text;
+}
+
 function mapRequestRow(row) {
   if (!row) return null;
 
@@ -20,8 +30,8 @@ function mapRequestRow(row) {
     stayId: row.stay_id,
     unitCount: Number(row.unit_count),
     selectedUnitIds: row.selected_unit_ids ?? [],
-    checkIn: String(row.check_in),
-    checkOut: String(row.check_out),
+    checkIn: asIsoDate(row.check_in),
+    checkOut: asIsoDate(row.check_out),
     adults: Number(row.adults),
     children: Number(row.children),
     capacity: Number(row.capacity),
@@ -311,7 +321,7 @@ export function createPostgresBookingRepository(sql) {
         order by night_date, unit_id
       `;
       return rows.map((row) => ({
-        date: String(row.night_date),
+        date: asIsoDate(row.night_date),
         unitId: row.unit_id,
         stayId: row.stay_id,
         available: Boolean(row.available),

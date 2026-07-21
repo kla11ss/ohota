@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createMemoryBookingRepository } from "../server/booking-database.js";
+import {
+  createMemoryBookingRepository,
+  createPostgresBookingRepository,
+} from "../server/booking-database.js";
 import {
   formatAvailability,
   processAvailabilityCheck,
@@ -59,6 +62,22 @@ test("public calendar aggregates hotel inventory and keeps house units anonymous
   assert.equal(result.days["2026-08-02"].cottage.available, false);
   assert.equal(result.days["2026-08-02"].hunterHouses["hunter-house-1"].available, false);
   assert.equal(JSON.stringify(result).includes("requestId"), false);
+});
+
+test("Postgres date objects are normalized before calendar aggregation", async () => {
+  const sql = async () => [{
+    night_date: new Date("2027-06-10T00:00:00.000Z"),
+    unit_id: "cottage",
+    stay_id: "cottage",
+    available: false,
+  }];
+  const repository = createPostgresBookingRepository(sql);
+
+  const rows = await repository.listAvailability("2027-06-10", "2027-06-11");
+  const calendar = formatAvailability("2027-06-10", "2027-06-11", rows);
+
+  assert.equal(rows[0].date, "2027-06-10");
+  assert.equal(calendar.days["2027-06-10"].cottage.available, false);
 });
 
 test("confirmed [check-in, check-out) allocation blocks nights but not the checkout boundary", async () => {
