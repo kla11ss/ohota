@@ -27,7 +27,8 @@ begin
      or to_regprocedure('public.release_telegram_update(bigint)') is null
      or to_regprocedure('public.cleanup_booking_rate_limits(integer,integer)') is null
      or to_regprocedure('public.reserve_booking_rate_limit(text[],integer)') is null
-     or to_regprocedure('public.release_booking_rate_limit(text,uuid)') is null then
+     or to_regprocedure('public.release_booking_rate_limit(text,uuid)') is null
+     or to_regprocedure('public._assert_booking_allocation_state(uuid)') is null then
     raise exception using
       errcode = '42883',
       message = 'booking runtime functions must exist before booking-app-role.sql';
@@ -184,6 +185,7 @@ revoke execute on function public.release_telegram_update(bigint) from public;
 revoke execute on function public.cleanup_booking_rate_limits(integer, integer) from public;
 revoke execute on function public.reserve_booking_rate_limit(text[], integer) from public;
 revoke execute on function public.release_booking_rate_limit(text, uuid) from public;
+revoke execute on function public._assert_booking_allocation_state(uuid) from public;
 
 grant execute on function public.booking_availability(date, date) to booking_app;
 grant execute on function public.check_booking_availability(text, smallint, text[], date, date) to booking_app;
@@ -195,6 +197,10 @@ grant execute on function public.release_telegram_update(bigint) to booking_app;
 grant execute on function public.cleanup_booking_rate_limits(integer, integer) to booking_app;
 grant execute on function public.reserve_booking_rate_limit(text[], integer) to booking_app;
 grant execute on function public.release_booking_rate_limit(text, uuid) to booking_app;
+-- Deferred allocation constraint triggers run with the inserting role and call
+-- this read-only assertion at commit time. Without this exact EXECUTE grant,
+-- a valid pending request is rolled back with SQLSTATE 42501.
+grant execute on function public._assert_booking_allocation_state(uuid) to booking_app;
 
 alter table public.booking_requests enable row level security;
 alter table public.booking_allocations enable row level security;
@@ -321,6 +327,14 @@ begin
      or not pg_catalog.has_column_privilege('booking_app', 'public.booking_requests', 'status', 'UPDATE')
      or not pg_catalog.has_column_privilege('booking_app', 'public.booking_allocations', 'unit_id', 'SELECT') then
     raise exception 'booking_app is missing a required runtime privilege';
+  end if;
+
+  if not pg_catalog.has_function_privilege(
+    'booking_app',
+    'public._assert_booking_allocation_state(uuid)'::regprocedure,
+    'EXECUTE'
+  ) then
+    raise exception 'booking_app cannot execute deferred allocation assertion';
   end if;
 
   foreach runtime_function in array array[

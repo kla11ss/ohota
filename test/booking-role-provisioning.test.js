@@ -70,6 +70,17 @@ test("runtime mutations remain behind fixed-path SECURITY DEFINER functions", ()
   assert.match(ROLE_SQL, /routine\.prosecdef[\s\S]+setting like 'search_path=%'/i);
 });
 
+test("deferred allocation integrity checks can run for booking_app at commit", () => {
+  assert.match(
+    ROLE_SQL,
+    /grant execute on function public\._assert_booking_allocation_state\(uuid\) to booking_app/i,
+  );
+  assert.doesNotMatch(
+    ROLE_SQL,
+    /grant execute on function public\._check_booking_request_(?:allocation|status)_state/i,
+  );
+});
+
 test("every stored function called by the runtime repository is granted", () => {
   const runtimeFunctionCalls = [
     ...REPOSITORY_SOURCE.matchAll(
