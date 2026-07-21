@@ -384,6 +384,14 @@ function databaseErrorCategory(error) {
   return "other";
 }
 
+function databasePermissionResource(error) {
+  const message = typeof error?.message === "string" ? error.message : "";
+  const match = message.match(
+    /permission denied for (?:function|table|sequence|schema|database) ([A-Za-z0-9_.]+)/i,
+  );
+  return match ? match[1].slice(0, 100) : null;
+}
+
 function logDatabaseFailure(stage, error, environment) {
   let configuredRole = "unparseable";
   try {
@@ -396,6 +404,7 @@ function logDatabaseFailure(stage, error, environment) {
     stage,
     code: typeof error?.code === "string" ? error.code.slice(0, 32) : "unknown",
     category: databaseErrorCategory(error),
+    resource: databasePermissionResource(error),
     configuredRole: configuredRole.slice(0, 64),
     constraint: typeof error?.constraint_name === "string"
       ? error.constraint_name.slice(0, 100)
