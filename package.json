@@ -12,6 +12,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test",
+    "setup:database": "node --env-file=.env scripts/provision-neon.mjs",
     "setup:telegram": "node --env-file=.env scripts/setup-telegram-webhook.mjs"
   },
   "dependencies": {

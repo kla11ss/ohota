@@ -26,7 +26,11 @@ test("booking_app provisioning is idempotent and contains no embedded credential
 test("booking_app has no ownership or broad DDL and inventory grants", () => {
   assert.match(
     ROLE_SQL,
-    /alter role booking_app with[\s\S]+nosuperuser[\s\S]+nocreatedb[\s\S]+nocreaterole[\s\S]+noinherit[\s\S]+noreplication[\s\S]+nobypassrls/i,
+    /alter role booking_app with[\s\S]+login[\s\S]+nocreatedb[\s\S]+nocreaterole[\s\S]+noinherit[\s\S]+connection limit 20/i,
+  );
+  assert.match(
+    ROLE_SQL,
+    /runtime_role\.rolsuper[\s\S]+runtime_role\.rolcreatedb[\s\S]+runtime_role\.rolcreaterole[\s\S]+runtime_role\.rolinherit[\s\S]+runtime_role\.rolreplication[\s\S]+runtime_role\.rolbypassrls/i,
   );
   assert.match(ROLE_SQL, /revoke create on schema public from public/i);
   assert.match(ROLE_SQL, /grant usage on schema public to booking_app/i);

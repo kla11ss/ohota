@@ -45,14 +45,14 @@ $booking_app_create_role$;
 
 -- Re-applying the template hardens role attributes without changing its
 -- out-of-band credential.
+-- Neon blocks explicit SUPERUSER, REPLICATION, and BYPASSRLS changes for
+-- project-owner roles, even when setting them to false. New roles default to
+-- false for those attributes, and the assertions below fail closed otherwise.
 alter role booking_app with
   login
-  nosuperuser
   nocreatedb
   nocreaterole
   noinherit
-  noreplication
-  nobypassrls
   connection limit 20;
 
 alter role booking_app set search_path = pg_catalog, public;

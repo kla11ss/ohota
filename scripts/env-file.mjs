@@ -60,7 +60,8 @@ export async function persistEnvFile(filePath, updates, options = {}) {
   const suffix = randomBytes(8).toString("hex");
   // For `.env` this produces `.env.tmp-*`, which is covered by the repository's
   // `.env.*` ignore rule even if the process stops before the atomic rename.
-  const temporaryPath = path.join(directory, `${basename}.tmp-${process.pid}-${suffix}`);
+  const processId = globalThis.process?.pid ?? "runtime";
+  const temporaryPath = path.join(directory, `${basename}.tmp-${processId}-${suffix}`);
   let handle = null;
   try {
     handle = await fileSystem.open(temporaryPath, "wx", 0o600);
