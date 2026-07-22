@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Hero } from "./components/Hero.jsx";
 import { FaqSection } from "./components/FaqSection.jsx";
 import { ReviewsSection } from "./components/ReviewsSection.jsx";
@@ -23,7 +23,65 @@ export function App() {
   const [planOpen, setPlanOpen] = useState(false);
   const [planView, setPlanView] = useState("trip");
   const [planStayId, setPlanStayId] = useState("hotel-room");
+  const [floatingPlanCta, setFloatingPlanCta] = useState(() => (
+    typeof window !== "undefined"
+    && window.location.hash !== ""
+    && window.location.hash !== "#top"
+  ));
   const shellRef = useRef(null);
+  const planAnchorRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const anchor = planAnchorRef.current;
+    if (!anchor) return undefined;
+
+    let observer;
+    let firstFrame;
+    let secondFrame;
+
+    const updateFromPosition = () => {
+      setFloatingPlanCta(anchor.getBoundingClientRect().bottom <= 70);
+    };
+
+    const startTracking = () => {
+      updateFromPosition();
+
+      if ("IntersectionObserver" in window) {
+        observer = new IntersectionObserver(
+          ([entry]) => setFloatingPlanCta(entry.boundingClientRect.bottom <= 70),
+          {
+            root: null,
+            rootMargin: "-70px 0px 0px 0px",
+            threshold: [0, 1],
+          },
+        );
+        observer.observe(anchor);
+      } else {
+        window.addEventListener("scroll", updateFromPosition, { passive: true });
+      }
+
+      window.addEventListener("resize", updateFromPosition, { passive: true });
+      window.addEventListener("hashchange", updateFromPosition);
+    };
+
+    const startsAtSectionHash = window.location.hash !== "" && window.location.hash !== "#top";
+    if (startsAtSectionHash) {
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(startTracking);
+      });
+    } else {
+      startTracking();
+    }
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+      observer?.disconnect();
+      window.removeEventListener("scroll", updateFromPosition);
+      window.removeEventListener("resize", updateFromPosition);
+      window.removeEventListener("hashchange", updateFromPosition);
+    };
+  }, []);
 
   useEffect(() => {
     document.body.classList.toggle("is-locked", menuOpen || planOpen);
@@ -59,9 +117,14 @@ export function App() {
           onMenuToggle={toggleMenu}
           onMenuClose={closeMenu}
           onPlan={openPlan}
+          showFloatingPlanCta={floatingPlanCta}
         />
         <main id="main-content">
-          <Hero onPlan={openPlan} />
+          <Hero
+            onPlan={openPlan}
+            planAnchorRef={planAnchorRef}
+            showPlanCta={!floatingPlanCta}
+          />
           <IntroSection />
           <DirectionsSection />
           <TerritorySection />

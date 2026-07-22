@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import postgres from "postgres";
 
@@ -7,12 +7,7 @@ import { persistEnvFile } from "./env-file.mjs";
 
 const workspaceRoot = path.resolve(import.meta.dirname, "..");
 const envPath = path.join(workspaceRoot, ".env");
-const migrationPath = path.join(
-  workspaceRoot,
-  "supabase",
-  "migrations",
-  "202607210001_booking_inventory.sql",
-);
+const migrationDirectory = path.join(workspaceRoot, "supabase", "migrations");
 const rolePath = path.join(workspaceRoot, "database", "booking-app-role.sql");
 
 const ownerDatabaseUrl = process.env.NEON_OWNER_DATABASE_URL?.trim();
@@ -48,13 +43,24 @@ try {
     );
   }
 
-  const [migrationSql, roleSql] = await Promise.all([
-    readFile(migrationPath, "utf8"),
+  const migrationNames = (await readdir(migrationDirectory))
+    .filter((name) => name.endsWith(".sql"))
+    .sort((left, right) => left.localeCompare(right, "en"));
+  if (migrationNames.length === 0) {
+    throw new Error("No Neon migrations found");
+  }
+
+  const [migrationSqlFiles, roleSql] = await Promise.all([
+    Promise.all(migrationNames.map((name) => (
+      readFile(path.join(migrationDirectory, name), "utf8")
+    ))),
     readFile(rolePath, "utf8"),
   ]);
 
   await owner.begin(async (transaction) => {
-    await transaction.unsafe(migrationSql);
+    for (const migrationSql of migrationSqlFiles) {
+      await transaction.unsafe(migrationSql);
+    }
   });
   await owner.unsafe(roleSql);
 

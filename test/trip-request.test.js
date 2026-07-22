@@ -36,6 +36,11 @@ test("trip requests are delivered only to TELEGRAM_TRIP_TOPIC_ID", async () => {
   assert.equal(telegramCall.body.chat_id, "-1001");
   assert.equal(telegramCall.body.message_thread_id, 40);
   assert.equal(telegramCall.body.parse_mode, "HTML");
+  assert.deepEqual(telegramCall.body.reply_markup, {
+    inline_keyboard: [[
+      { text: "✅ Рассмотрено", callback_data: "trip:reviewed" },
+    ]],
+  });
 });
 
 test("trip requests fail closed when TELEGRAM_TRIP_TOPIC_ID is missing", async () => {

@@ -85,6 +85,11 @@ export async function sendTripRequest(
     text: formatTripRequest(request),
     topicId,
     parseMode: "HTML",
+    replyMarkup: {
+      inline_keyboard: [[
+        { text: "✅ Рассмотрено", callback_data: "trip:reviewed" },
+      ]],
+    },
   }, environment, fetchImpl);
 }
 

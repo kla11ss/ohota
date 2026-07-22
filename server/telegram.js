@@ -83,6 +83,24 @@ export async function editTelegramReplyMarkup(chatId, messageId, replyMarkup, en
   }, environment, fetchImpl);
 }
 
+export async function editTelegramMessageText(
+  chatId,
+  messageId,
+  text,
+  replyMarkup,
+  environment,
+  fetchImpl,
+) {
+  const payload = {
+    chat_id: chatId,
+    message_id: messageId,
+    text,
+    disable_web_page_preview: true,
+  };
+  if (replyMarkup) payload.reply_markup = replyMarkup;
+  return callTelegram("editMessageText", payload, environment, fetchImpl);
+}
+
 export async function sendTopicMessage({
   text,
   topicId,

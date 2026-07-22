@@ -4,13 +4,15 @@ import { DATABASE_NOT_CONFIGURED, getBookingRepository } from "./booking-databas
 import {
   answerCallbackQuery,
   deleteTelegramMessage,
+  editTelegramMessageText,
   editTelegramReplyMarkup,
   getTelegramChatId,
   parseTopicId,
   sendTopicMessage,
 } from "./telegram.js";
 
-const CALLBACK_PATTERN = /^booking:(confirm|reject|cancel):([0-9a-f-]{36})$/i;
+const BOOKING_CALLBACK_PATTERN = /^booking:(confirm|reject|cancel):([0-9a-f-]{36})$/i;
+const TRIP_REVIEWED_CALLBACK = "trip:reviewed";
 const WEBHOOK_SECRET_PATTERN = /^[A-Za-z0-9_-]{32,256}$/;
 
 function safeEqual(left, right) {
@@ -64,11 +66,22 @@ export function validateTelegramWebhookAccess(update, secretHeader, environment 
     return { ok: false, status: 403, error: "Forbidden manager" };
   }
 
-  const match = CALLBACK_PATTERN.exec(callback.data ?? "");
+  if (callback.data === TRIP_REVIEWED_CALLBACK) {
+    return {
+      ok: true,
+      callback,
+      callbackType: "trip",
+      action: "reviewed",
+      requestId: null,
+    };
+  }
+
+  const match = BOOKING_CALLBACK_PATTERN.exec(callback.data ?? "");
   if (!match) return { ok: false, status: 400, error: "Unsupported callback" };
   return {
     ok: true,
     callback,
+    callbackType: "booking",
     action: match[1].toLowerCase(),
     requestId: match[2].toLowerCase(),
   };
@@ -105,6 +118,103 @@ async function bestEffortAnswer(callbackId, text, environment, fetchImpl, showAl
   } catch {
     // The database transition is authoritative even if Telegram's short-lived callback expires.
   }
+}
+
+function reviewedTripMessageText(originalText) {
+  const original = typeof originalText === "string" && originalText.trim()
+    ? originalText.trim()
+    : "Запрос на поездку";
+  return `✅ ЗАПРОС РАССМОТРЕН\n\n${original}`;
+}
+
+async function cleanupReviewedTripSource(callback, environment, fetchImpl) {
+  const sourceChatId = String(callback.message.chat.id);
+  const sourceMessageId = callback.message.message_id;
+  try {
+    await deleteTelegramMessage(sourceChatId, sourceMessageId, environment, fetchImpl);
+    return;
+  } catch {
+    // Preserve a compact audit stub when Telegram cannot delete the source.
+  }
+
+  try {
+    await editTelegramMessageText(
+      sourceChatId,
+      sourceMessageId,
+      "✅ Рассмотрено — перенесено в архив",
+      { inline_keyboard: [] },
+      environment,
+      fetchImpl,
+    );
+    return;
+  } catch {
+    // Some old messages cannot be edited; at minimum disable the stale button.
+  }
+
+  try {
+    await editTelegramReplyMarkup(
+      sourceChatId,
+      sourceMessageId,
+      { inline_keyboard: [] },
+      environment,
+      fetchImpl,
+    );
+  } catch {
+    // The completed route still prevents another archive copy.
+  }
+}
+
+async function routeReviewedTrip({
+  callback,
+  repository,
+  sourceTopicId,
+  targetTopicId,
+  environment,
+  fetchImpl,
+}) {
+  const source = {
+    chatId: String(callback.message.chat.id),
+    messageId: callback.message.message_id,
+    topicId: sourceTopicId,
+  };
+  const routingClaim = await repository.claimTripMessageRouting(source, targetTopicId);
+  if (routingClaim.state !== "claimed" || !routingClaim.claimToken) {
+    if (routingClaim.state === "completed") {
+      await cleanupReviewedTripSource(callback, environment, fetchImpl);
+    }
+    return { state: routingClaim.state, telegram: null };
+  }
+
+  let telegram = null;
+  try {
+    telegram = await sendTopicMessage({
+      text: reviewedTripMessageText(callback.message.text),
+      topicId: targetTopicId,
+    }, environment, fetchImpl);
+    const completed = await repository.completeTripMessageRouting(
+      source,
+      routingClaim.claimToken,
+      telegram.messageId,
+    );
+    if (!completed) throw new Error("TRIP_ROUTING_CLAIM_LOST");
+  } catch (error) {
+    if (telegram) {
+      try {
+        await deleteTelegramMessage(telegram.chatId, telegram.messageId, environment, fetchImpl);
+      } catch {
+        // Keep the original error; the source button remains available for retry.
+      }
+    }
+    try {
+      await repository.releaseTripMessageRouting(source, routingClaim.claimToken);
+    } catch {
+      // The two-minute route lease allows a later callback to recover.
+    }
+    throw error;
+  }
+
+  await cleanupReviewedTripSource(callback, environment, fetchImpl);
+  return { state: "completed", telegram };
 }
 
 async function routeMessage({
@@ -230,6 +340,57 @@ export async function processTelegramWebhook(update, secretHeader, environment =
     }
     if (claimState !== "claimed") throw new Error("INVALID_TELEGRAM_UPDATE_CLAIM_STATE");
     claimed = true;
+
+    if (access.callbackType === "trip") {
+      const tripTopicId = parseTopicId(
+        environment.TELEGRAM_TRIP_TOPIC_ID,
+        "TELEGRAM_TRIP_TOPIC_ID",
+      );
+      const archiveTopicId = parseTopicId(
+        environment.TELEGRAM_ARCHIVE_TOPIC_ID,
+        "TELEGRAM_ARCHIVE_TOPIC_ID",
+      );
+      if (Number(access.callback.message.message_thread_id) !== tripTopicId) {
+        await bestEffortAnswer(
+          access.callback.id,
+          "Эта кнопка находится не в теме запросов на поездку.",
+          environment,
+          options.fetchImpl ?? fetch,
+          true,
+        );
+        await repository.completeTelegramUpdate(update.update_id);
+        return { ok: true, status: 200, body: { ok: true, result: "wrong_topic" } };
+      }
+
+      const routing = await routeReviewedTrip({
+        callback: access.callback,
+        repository,
+        sourceTopicId: tripTopicId,
+        targetTopicId: archiveTopicId,
+        environment,
+        fetchImpl: options.fetchImpl ?? fetch,
+      });
+      const answer = routing.telegram
+        ? "Запрос перенесён в архив"
+        : routing.state === "completed"
+          ? "Запрос уже перенесён в архив"
+          : "Запрос уже переносится в архив";
+      await bestEffortAnswer(
+        access.callback.id,
+        answer,
+        environment,
+        options.fetchImpl ?? fetch,
+      );
+      await repository.completeTelegramUpdate(update.update_id);
+      return {
+        ok: true,
+        status: 200,
+        body: {
+          ok: true,
+          result: routing.telegram ? "trip_reviewed" : `trip_${routing.state}`,
+        },
+      };
+    }
 
     const expectedTopicId = access.action === "cancel"
       ? parseTopicId(environment.TELEGRAM_CONFIRMED_TOPIC_ID, "TELEGRAM_CONFIRMED_TOPIC_ID")

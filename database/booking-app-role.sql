@@ -12,7 +12,8 @@ begin
      or to_regclass('public.booking_allocations') is null
      or to_regclass('public.booking_units') is null
      or to_regclass('public.telegram_updates') is null
-     or to_regclass('public.booking_rate_limits') is null then
+     or to_regclass('public.booking_rate_limits') is null
+     or to_regclass('public.telegram_trip_routes') is null then
     raise exception using
       errcode = '42P01',
       message = 'booking migration must be applied before booking-app-role.sql';
@@ -28,6 +29,9 @@ begin
      or to_regprocedure('public.cleanup_booking_rate_limits(integer,integer)') is null
      or to_regprocedure('public.reserve_booking_rate_limit(text[],integer)') is null
      or to_regprocedure('public.release_booking_rate_limit(text,uuid)') is null
+     or to_regprocedure('public.claim_trip_message_routing(bigint,bigint,bigint,bigint,uuid)') is null
+     or to_regprocedure('public.complete_trip_message_routing(bigint,bigint,uuid,bigint)') is null
+     or to_regprocedure('public.release_trip_message_routing(bigint,bigint,uuid)') is null
      or to_regprocedure('public._assert_booking_allocation_state(uuid)') is null then
     raise exception using
       errcode = '42883',
@@ -185,6 +189,9 @@ revoke execute on function public.release_telegram_update(bigint) from public;
 revoke execute on function public.cleanup_booking_rate_limits(integer, integer) from public;
 revoke execute on function public.reserve_booking_rate_limit(text[], integer) from public;
 revoke execute on function public.release_booking_rate_limit(text, uuid) from public;
+revoke execute on function public.claim_trip_message_routing(bigint, bigint, bigint, bigint, uuid) from public;
+revoke execute on function public.complete_trip_message_routing(bigint, bigint, uuid, bigint) from public;
+revoke execute on function public.release_trip_message_routing(bigint, bigint, uuid) from public;
 revoke execute on function public._assert_booking_allocation_state(uuid) from public;
 
 grant execute on function public.booking_availability(date, date) to booking_app;
@@ -197,6 +204,9 @@ grant execute on function public.release_telegram_update(bigint) to booking_app;
 grant execute on function public.cleanup_booking_rate_limits(integer, integer) to booking_app;
 grant execute on function public.reserve_booking_rate_limit(text[], integer) to booking_app;
 grant execute on function public.release_booking_rate_limit(text, uuid) to booking_app;
+grant execute on function public.claim_trip_message_routing(bigint, bigint, bigint, bigint, uuid) to booking_app;
+grant execute on function public.complete_trip_message_routing(bigint, bigint, uuid, bigint) to booking_app;
+grant execute on function public.release_trip_message_routing(bigint, bigint, uuid) to booking_app;
 -- Deferred allocation constraint triggers run with the inserting role and call
 -- this read-only assertion at commit time. Without this exact EXECUTE grant,
 -- a valid pending request is rolled back with SQLSTATE 42501.
@@ -204,6 +214,7 @@ grant execute on function public._assert_booking_allocation_state(uuid) to booki
 
 alter table public.booking_requests enable row level security;
 alter table public.booking_allocations enable row level security;
+alter table public.telegram_trip_routes enable row level security;
 
 drop policy if exists booking_app_requests_select on public.booking_requests;
 create policy booking_app_requests_select
@@ -303,7 +314,14 @@ begin
      or pg_catalog.has_table_privilege('booking_app', 'public.booking_allocations', 'UPDATE')
      or pg_catalog.has_table_privilege('booking_app', 'public.booking_allocations', 'DELETE')
      or pg_catalog.has_table_privilege('booking_app', 'public.booking_requests', 'DELETE')
-     or pg_catalog.has_table_privilege('booking_app', 'public.booking_requests', 'TRUNCATE') then
+     or pg_catalog.has_table_privilege('booking_app', 'public.booking_requests', 'TRUNCATE')
+     or pg_catalog.has_table_privilege('booking_app', 'public.telegram_trip_routes', 'SELECT')
+     or pg_catalog.has_table_privilege('booking_app', 'public.telegram_trip_routes', 'INSERT')
+     or pg_catalog.has_table_privilege('booking_app', 'public.telegram_trip_routes', 'UPDATE')
+     or pg_catalog.has_table_privilege('booking_app', 'public.telegram_trip_routes', 'DELETE')
+     or pg_catalog.has_table_privilege('booking_app', 'public.telegram_trip_routes', 'TRUNCATE')
+     or pg_catalog.has_table_privilege('booking_app', 'public.telegram_trip_routes', 'REFERENCES')
+     or pg_catalog.has_table_privilege('booking_app', 'public.telegram_trip_routes', 'TRIGGER') then
     raise exception 'booking_app retained DDL or direct inventory mutation privileges';
   end if;
 
@@ -347,7 +365,10 @@ begin
     'public.release_telegram_update(bigint)'::regprocedure,
     'public.cleanup_booking_rate_limits(integer,integer)'::regprocedure,
     'public.reserve_booking_rate_limit(text[],integer)'::regprocedure,
-    'public.release_booking_rate_limit(text,uuid)'::regprocedure
+    'public.release_booking_rate_limit(text,uuid)'::regprocedure,
+    'public.claim_trip_message_routing(bigint,bigint,bigint,bigint,uuid)'::regprocedure,
+    'public.complete_trip_message_routing(bigint,bigint,uuid,bigint)'::regprocedure,
+    'public.release_trip_message_routing(bigint,bigint,uuid)'::regprocedure
   ] loop
     if not pg_catalog.has_function_privilege('booking_app', runtime_function, 'EXECUTE') then
       raise exception 'booking_app cannot execute required function %', runtime_function::regprocedure;

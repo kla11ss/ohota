@@ -10,8 +10,16 @@ const MIGRATION_SQL = readFileSync(
   new URL("../supabase/migrations/202607210001_booking_inventory.sql", import.meta.url),
   "utf8",
 );
+const TRIP_ROUTING_MIGRATION_SQL = readFileSync(
+  new URL("../supabase/migrations/202607220001_trip_review_routing.sql", import.meta.url),
+  "utf8",
+);
 const REPOSITORY_SOURCE = readFileSync(
   new URL("../server/booking-database.js", import.meta.url),
+  "utf8",
+);
+const PROVISION_SOURCE = readFileSync(
+  new URL("../scripts/provision-neon.mjs", import.meta.url),
   "utf8",
 );
 
@@ -62,6 +70,9 @@ test("runtime mutations remain behind fixed-path SECURITY DEFINER functions", ()
     "cleanup_booking_rate_limits",
     "reserve_booking_rate_limit",
     "release_booking_rate_limit",
+    "claim_trip_message_routing",
+    "complete_trip_message_routing",
+    "release_trip_message_routing",
   ];
 
   for (const functionName of requiredFunctions) {
@@ -105,4 +116,57 @@ test("the inventory migration keeps half-open stays and database overlap protect
   );
   assert.match(MIGRATION_SQL, /confirmed_booking_allocation_count_mismatch/i);
   assert.match(MIGRATION_SQL, /unconfirmed_booking_has_allocations/i);
+});
+
+test("trip routing migration stores only technical ids behind an expiring lease", () => {
+  const tableDefinition = /create table public\.telegram_trip_routes \(([\s\S]+?)\n\);/i
+    .exec(TRIP_ROUTING_MIGRATION_SQL)?.[1] ?? "";
+  assert.ok(tableDefinition);
+  assert.match(
+    tableDefinition,
+    /primary key \(source_chat_id, source_message_id\)/i,
+  );
+  assert.match(tableDefinition, /target_message_id bigint/i);
+  assert.match(tableDefinition, /claim_token uuid/i);
+  assert.match(TRIP_ROUTING_MIGRATION_SQL, /interval '2 minutes'/i);
+  assert.doesNotMatch(
+    tableDefinition,
+    /\b(phone|name|comment|message_text|original_text)\b/i,
+  );
+});
+
+test("trip routing mutations are SECURITY DEFINER only with no runtime table access", () => {
+  for (const functionName of [
+    "claim_trip_message_routing",
+    "complete_trip_message_routing",
+    "release_trip_message_routing",
+  ]) {
+    assert.match(
+      TRIP_ROUTING_MIGRATION_SQL,
+      new RegExp(`function public\\.${functionName}\\([\\s\\S]+?security definer`, "i"),
+    );
+    assert.match(
+      TRIP_ROUTING_MIGRATION_SQL,
+      new RegExp(`revoke execute on function public\\.${functionName}\\(`, "i"),
+    );
+    assert.match(
+      ROLE_SQL,
+      new RegExp(`grant execute on function public\\.${functionName}\\(`, "i"),
+    );
+  }
+  assert.match(
+    ROLE_SQL,
+    /has_table_privilege\('booking_app', 'public\.telegram_trip_routes', 'SELECT'\)/i,
+  );
+  assert.doesNotMatch(
+    ROLE_SQL,
+    /grant\s+(?:select|insert|update|delete|truncate)[\s\S]{0,80}on\s+public\.telegram_trip_routes\s+to\s+booking_app/i,
+  );
+});
+
+test("clean Neon provisioning applies every SQL migration in sorted order", () => {
+  assert.match(PROVISION_SOURCE, /readdir\(migrationDirectory\)/i);
+  assert.match(PROVISION_SOURCE, /\.filter\(\(name\) => name\.endsWith\("\.sql"\)\)/i);
+  assert.match(PROVISION_SOURCE, /\.sort\(/i);
+  assert.match(PROVISION_SOURCE, /for \(const migrationSql of migrationSqlFiles\)/i);
 });

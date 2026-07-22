@@ -39,7 +39,7 @@ html {
 
 body {
   margin: 0;
-  min-width: 320px;
+  min-width: 0;
   min-height: 100vh;
   background: var(--color-paper);
   color: var(--color-ink);
@@ -251,6 +251,51 @@ h2 {
   cursor: pointer;
 }
 
+.floating-plan-cta {
+  position: fixed;
+  top: 70px;
+  right: var(--gutter);
+  z-index: 205;
+  animation: floating-plan-cta-enter 180ms ease-out both;
+}
+
+.floating-plan-cta__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 13px 0 15px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-char);
+  color: var(--color-paper);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.floating-plan-cta__button svg {
+  flex: 0 0 auto;
+  transition: transform 180ms ease;
+}
+
+.floating-plan-cta__button:hover svg {
+  transform: translateX(4px);
+}
+
+@keyframes floating-plan-cta-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .menu-panel {
   position: fixed;
   top: 12px;
@@ -396,8 +441,14 @@ h2 {
   text-transform: uppercase;
 }
 
-.hero__cta {
+.hero__cta-anchor {
+  display: flex;
+  height: 48px;
   margin-top: 24px;
+}
+
+.hero__cta {
+  margin-top: 0;
   background: var(--color-paper);
   color: var(--color-ink);
 }
@@ -3037,6 +3088,14 @@ h2 {
 
   .menu-toggle {
     top: 14px;
+    min-height: 44px;
+  }
+
+  .floating-plan-cta {
+    right: 16px;
+  }
+
+  .floating-plan-cta__button {
     min-height: 44px;
   }
 

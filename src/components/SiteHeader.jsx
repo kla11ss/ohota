@@ -2,8 +2,9 @@ import { useEffect, useRef } from "react";
 import { ArrowRight, List, Phone, X } from "@phosphor-icons/react";
 import { navItems } from "../content.js";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
+import { PlanCta } from "./PlanCta.jsx";
 
-export function SiteHeader({ menuOpen, onMenuToggle, onMenuClose, onPlan }) {
+export function SiteHeader({ menuOpen, onMenuToggle, onMenuClose, onPlan, showFloatingPlanCta }) {
   const headerRef = useRef(null);
   const handleNav = () => onMenuClose();
   useFocusTrap(menuOpen, headerRef, onMenuClose);
@@ -26,6 +27,12 @@ export function SiteHeader({ menuOpen, onMenuToggle, onMenuClose, onPlan }) {
         <span>{menuOpen ? "Закрыть" : "Меню"}</span>
         {menuOpen ? <X size={16} weight="regular" /> : <List size={17} weight="regular" />}
       </button>
+
+      {showFloatingPlanCta && !menuOpen ? (
+        <div className="floating-plan-cta">
+          <PlanCta onClick={onPlan} variant="floating" />
+        </div>
+      ) : null}
 
       <div
         id="site-menu"

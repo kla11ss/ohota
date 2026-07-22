@@ -1,7 +1,8 @@
 import { ArrowDown, ArrowRight } from "@phosphor-icons/react";
 import { heroStories } from "../content.js";
+import { PlanCta } from "./PlanCta.jsx";
 
-export function Hero({ onPlan }) {
+export function Hero({ onPlan, planAnchorRef, showPlanCta }) {
   return (
     <section className="hero" id="top" aria-labelledby="hero-title">
       <img
@@ -17,9 +18,9 @@ export function Hero({ onPlan }) {
           «Великовское» — индивидуально согласуемые сценарии охоты, рыбалки, размещения и
           природного отдыха на левом берегу Волги.
         </p>
-        <button type="button" className="pill-button hero__cta" onClick={onPlan}>
-          Запланировать поездку <ArrowRight size={17} weight="regular" />
-        </button>
+        <div className="hero__cta-anchor" ref={planAnchorRef}>
+          {showPlanCta ? <PlanCta onClick={onPlan} /> : null}
+        </div>
       </div>
 
       <span className="hero__image-note">Иллюстративное изображение</span>

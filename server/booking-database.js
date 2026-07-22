@@ -297,6 +297,48 @@ export function createPostgresBookingRepository(sql) {
       await sql`select public.release_telegram_update(${updateId})`;
     },
 
+    async claimTripMessageRouting(source, targetTopicId) {
+      const claimToken = randomUUID();
+      const rows = await sql`
+        select * from public.claim_trip_message_routing(
+          ${source.chatId},
+          ${source.messageId},
+          ${source.topicId},
+          ${targetTopicId},
+          ${claimToken}
+        )
+      `;
+      const row = rows[0];
+      return {
+        state: row?.claim_state ?? "processing",
+        claimToken: row?.route_claim_token ? String(row.route_claim_token) : null,
+        targetMessageId: asNumber(row?.routed_target_message_id),
+      };
+    },
+
+    async completeTripMessageRouting(source, claimToken, targetMessageId) {
+      const rows = await sql`
+        select public.complete_trip_message_routing(
+          ${source.chatId},
+          ${source.messageId},
+          ${claimToken},
+          ${targetMessageId}
+        ) as completed
+      `;
+      return Boolean(rows[0]?.completed);
+    },
+
+    async releaseTripMessageRouting(source, claimToken) {
+      const rows = await sql`
+        select public.release_trip_message_routing(
+          ${source.chatId},
+          ${source.messageId},
+          ${claimToken}
+        ) as released
+      `;
+      return Boolean(rows[0]?.released);
+    },
+
     async confirmRequest(requestId, actorTelegramUserId) {
       const rows = await sql`
         select * from public.confirm_booking_request(${requestId}, ${actorTelegramUserId})
@@ -367,6 +409,7 @@ export function createMemoryBookingRepository(options = {}) {
   const requestKeys = new Map();
   const allocations = [];
   const telegramUpdates = new Map();
+  const tripRoutes = new Map();
   const rateLimits = new Map();
   const now = typeof options.now === "function" ? options.now : Date.now;
   const rateLimitRetentionSeconds = Number.isInteger(options.rateLimitRetentionSeconds)
@@ -575,6 +618,76 @@ export function createMemoryBookingRepository(options = {}) {
       if (telegramUpdates.get(updateId)?.status === "processing") telegramUpdates.delete(updateId);
     },
 
+    async claimTripMessageRouting(source, targetTopicId) {
+      const key = `${String(source.chatId)}:${Number(source.messageId)}`;
+      const existing = tripRoutes.get(key);
+      const timestamp = now();
+      const claimExpired = existing?.state === "processing"
+        && timestamp - existing.updatedAt >= 120_000;
+
+      if (existing && !claimExpired) {
+        return {
+          state: existing.state,
+          claimToken: null,
+          targetMessageId: existing.targetMessageId,
+        };
+      }
+      if (
+        existing
+        && (
+          Number(existing.sourceTopicId) !== Number(source.topicId)
+          || Number(existing.targetTopicId) !== Number(targetTopicId)
+        )
+      ) {
+        return { state: "processing", claimToken: null, targetMessageId: null };
+      }
+
+      const claimToken = randomUUID();
+      tripRoutes.set(key, {
+        sourceChatId: String(source.chatId),
+        sourceMessageId: Number(source.messageId),
+        sourceTopicId: Number(source.topicId),
+        targetTopicId: Number(targetTopicId),
+        targetMessageId: null,
+        state: "processing",
+        claimToken,
+        claimedAt: timestamp,
+        completedAt: null,
+        createdAt: existing?.createdAt ?? timestamp,
+        updatedAt: timestamp,
+      });
+      return { state: "claimed", claimToken, targetMessageId: null };
+    },
+
+    async completeTripMessageRouting(source, claimToken, targetMessageId) {
+      const key = `${String(source.chatId)}:${Number(source.messageId)}`;
+      const route = tripRoutes.get(key);
+      if (
+        !route
+        || route.state !== "processing"
+        || route.claimToken !== claimToken
+      ) return false;
+
+      route.state = "completed";
+      route.claimToken = null;
+      route.targetMessageId = Number(targetMessageId);
+      route.completedAt = now();
+      route.updatedAt = route.completedAt;
+      return true;
+    },
+
+    async releaseTripMessageRouting(source, claimToken) {
+      const key = `${String(source.chatId)}:${Number(source.messageId)}`;
+      const route = tripRoutes.get(key);
+      if (
+        !route
+        || route.state !== "processing"
+        || route.claimToken !== claimToken
+      ) return false;
+      tripRoutes.delete(key);
+      return true;
+    },
+
     async confirmRequest(requestId, actorTelegramUserId) {
       const request = requests.get(requestId);
       if (!request) return { ok: false, code: "not_found", status: null, allocatedUnitIds: [] };
@@ -687,6 +800,7 @@ export function createMemoryBookingRepository(options = {}) {
         requests: clone([...requests.values()]),
         allocations: clone(allocations),
         telegramUpdates: clone([...telegramUpdates.entries()]),
+        tripRoutes: clone([...tripRoutes.values()]),
         rateLimits: clone([...rateLimits.entries()]),
       };
     },
