@@ -40,11 +40,20 @@ html {
 @media (min-width: 701px) and (prefers-reduced-motion: no-preference) {
   html {
     scroll-snap-type: y proximity;
+    /* Leave some breathing room when a section settles instead of snapping flush to the viewport. */
+    scroll-padding-top: clamp(48px, 6vh, 80px);
+    scroll-padding-bottom: 12vh;
   }
 
   main > section {
     scroll-snap-align: start;
     scroll-snap-stop: normal;
+  }
+
+  /* The first and last sections should never pull a manual scroll back abruptly. */
+  main > section:first-child,
+  main > section:last-child {
+    scroll-snap-align: none;
   }
 
   html:has(body.is-locked) {
