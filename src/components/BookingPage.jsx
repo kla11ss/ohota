@@ -119,6 +119,7 @@ function Stepper({ id, label, hint, value, min, max, onChange }) {
 
 export function BookingPage({
   initialStayId,
+  initialUnitIds = [],
   onSubmit,
   isSubmitting = false,
   submitError = "",
@@ -180,8 +181,14 @@ export function BookingPage({
 
   useEffect(() => {
     const nextStay = getStayById(initialStayId);
-    if (nextStay) setStayId(nextStay.id);
-  }, [initialStayId]);
+    if (!nextStay) return;
+    setStayId(nextStay.id);
+    if (nextStay.id === "hunter-house" && Array.isArray(initialUnitIds)) {
+      const allowedIds = new Set(nextStay.unitOptions?.map((option) => option.id) ?? []);
+      const selected = [...new Set(initialUnitIds.filter((unitId) => allowedIds.has(unitId)))];
+      if (selected.length) setSelectedUnitIds(selected);
+    }
+  }, [initialStayId, initialUnitIds]);
 
   useEffect(() => {
     const root = pageRef.current;

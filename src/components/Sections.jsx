@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   CalendarBlank,
@@ -18,6 +18,8 @@ import {
   stays,
 } from "../content.js";
 import { JourneyRoadmap } from "./JourneyRoadmap.jsx";
+import { AccommodationMap } from "./AccommodationMap.jsx";
+import { getAccommodationMarkersForStay } from "../accommodation-map/config.js";
 
 function handleTabKey(event, items, activeId, onSelect, prefix) {
   const currentIndex = items.findIndex((item) => item.id === activeId);
@@ -284,12 +286,43 @@ export function NatureSection() {
 
 export function StaySection({ onBook }) {
   const [activeStay, setActiveStay] = useState(stays[0].id);
+  const [mapConfig, setMapConfig] = useState(null);
+  const [activeMarkerId, setActiveMarkerId] = useState(null);
   const stay = stays.find((item) => item.id === activeStay) ?? stays[0];
   const bookingStay = getStayById(stay.id);
   const price = bookingStay?.pricePerNight == null
     ? "X ₽"
     : formatRubles(bookingStay.pricePerNight);
   const priceUnit = stay.id === "hotel-room" ? "за номер / сутки" : "за объект / сутки";
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/accommodation-map")
+      .then((response) => response.ok ? response.json() : null)
+      .then((result) => {
+        if (!active || !result?.published || !result.config) return;
+        setMapConfig(result.config);
+      })
+      .catch(() => {
+        // The existing accommodation illustration remains a graceful fallback.
+      });
+    return () => { active = false; };
+  }, []);
+
+  const selectStay = (stayId) => {
+    setActiveStay(stayId);
+    const preferredMarker = getAccommodationMarkersForStay(mapConfig, stayId)[0];
+    setActiveMarkerId(preferredMarker?.id ?? null);
+  };
+
+  const selectMarker = (marker) => {
+    setActiveStay(marker.stayId);
+    setActiveMarkerId(marker.id);
+  };
+
+  const selectedMarker = mapConfig?.markers?.find((marker) => marker.id === activeMarkerId)
+    ?? getAccommodationMarkersForStay(mapConfig, activeStay)[0]
+    ?? null;
 
   return (
     <section className="stay-section" id="stay" aria-labelledby="stay-title">
@@ -304,16 +337,31 @@ export function StaySection({ onBook }) {
       </div>
 
       <div className="page-shell stay-layout">
-        <figure className="stay-media">
-          <img
-            src="/images/lodge-interior.webp"
-            alt="Иллюстративный интерьер деревянного дома с камином"
-            loading="lazy"
+        {mapConfig ? (
+          <AccommodationMap
+            config={mapConfig}
+            activeStayId={activeStay}
+            activeMarkerId={selectedMarker?.id}
+            onSelectMarker={selectMarker}
           />
-          <figcaption>Иллюстративная фотография</figcaption>
-        </figure>
+        ) : (
+          <figure className="stay-media">
+            <img
+              src="/images/lodge-interior.webp"
+              alt="Иллюстративный интерьер деревянного дома с камином"
+              loading="lazy"
+            />
+            <figcaption>Иллюстративная фотография</figcaption>
+          </figure>
+        )}
 
         <div className="stay-selector">
+          <label className="stay-select">
+            Вариант размещения
+            <select value={activeStay} onChange={(event) => selectStay(event.target.value)}>
+              {stays.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}
+            </select>
+          </label>
           <div className="stay-tabs" role="tablist" aria-label="Варианты размещения">
             {stays.map((item) => (
               <button
@@ -324,8 +372,8 @@ export function StaySection({ onBook }) {
                 aria-selected={item.id === activeStay}
                 tabIndex={item.id === activeStay ? 0 : -1}
                 className={item.id === activeStay ? "is-active" : ""}
-                onClick={() => setActiveStay(item.id)}
-                onKeyDown={(event) => handleTabKey(event, stays, activeStay, setActiveStay, "stay-tab")}
+                onClick={() => selectStay(item.id)}
+                onKeyDown={(event) => handleTabKey(event, stays, activeStay, selectStay, "stay-tab")}
                 key={item.id}
               >
                 {item.label}
@@ -351,7 +399,11 @@ export function StaySection({ onBook }) {
                 <span>Ориентировочная стоимость</span>
                 <strong>{price} <small>{priceUnit}</small></strong>
               </div>
-              <button className="pill-button" type="button" onClick={() => onBook?.(stay.id)}>
+              <button
+                className="pill-button"
+                type="button"
+                onClick={() => onBook?.(stay.id, stay.id === "hunter-house" ? selectedMarker?.unitIds ?? [] : [])}
+              >
                 <CalendarBlank size={17} weight="regular" /> Выбрать даты
               </button>
             </div>

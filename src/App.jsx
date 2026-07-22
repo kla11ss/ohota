@@ -17,12 +17,14 @@ import {
   TransparencySection,
 } from "./components/Sections.jsx";
 import { TripModal } from "./components/TripModal.jsx";
+import { AccommodationMapAdmin } from "./components/AccommodationMapAdmin.jsx";
 
 export function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [planView, setPlanView] = useState("trip");
   const [planStayId, setPlanStayId] = useState("hotel-room");
+  const [planStayUnitIds, setPlanStayUnitIds] = useState([]);
   const [floatingPlanCta, setFloatingPlanCta] = useState(() => (
     typeof window !== "undefined"
     && window.location.hash !== ""
@@ -116,12 +118,17 @@ export function App() {
     setPlanView("trip");
     setPlanOpen(true);
   }, []);
-  const openStayPlan = useCallback((stayId = "hotel-room") => {
+  const openStayPlan = useCallback((stayId = "hotel-room", unitIds = []) => {
     setMenuOpen(false);
     setPlanStayId(stayId);
+    setPlanStayUnitIds(Array.isArray(unitIds) ? unitIds : []);
     setPlanView("stay");
     setPlanOpen(true);
   }, []);
+
+  if (typeof window !== "undefined" && window.location.pathname === "/admin/accommodation-map") {
+    return <AccommodationMapAdmin />;
+  }
 
   return (
     <>
@@ -159,6 +166,7 @@ export function App() {
         open={planOpen}
         initialView={planView}
         initialStayId={planStayId}
+        initialUnitIds={planStayUnitIds}
         onClose={closePlan}
       />
     </>

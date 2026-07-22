@@ -1,5 +1,15 @@
 # Design QA — бронирование размещения
 
+## Accommodation map and soft snap scroll — 22 July 2026
+
+- The public stay section continues to use the existing accommodation presentation until an owner publishes a prepared territory plan. It never exposes an unfinished editor draft to guests.
+- A published plan supports four synchronized markers: hotel rooms, cottage, hunter house No. 1 and hunter house No. 2. The shared hunter-house option highlights both markers; selecting an individual house preselects it for booking.
+- Desktop keeps the visible accommodation list; mobile uses an equivalent native selector. Map controls are keyboard-accessible and use responsive image coordinates, so markers retain their intended positions across sizes.
+- `/admin/accommodation-map` is protected by a short-lived HttpOnly, Secure, SameSite=Strict signed session. Only site-relative image paths are accepted; the editor has draft and atomic publish actions and does not upload files.
+- Native `scroll-snap-type: y proximity` is enabled only above 700 px with normal scroll interruption. It is disabled for reduced motion and while the booking dialog locks the page.
+- Automated verification: 121 tests passed; production build passed; `git diff --check` passed.
+- Remaining release checks: apply the additive Neon migration with the database-owner role, set the two editor-only Netlify secrets, publish a real plan/photo set, then run visual QA against the deployed URL. The embedded browser cannot reach the Windows loopback preview despite the local Vite server listening on `127.0.0.1:5173`.
+
 ## Цель и доказательства
 
 - Source visual truth: переданный пользователем референсный скриншот и механика `https://yuhro.ru/uslugi/rybalka`.

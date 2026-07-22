@@ -93,6 +93,9 @@ try {
       to_regprocedure(
         'public.confirm_booking_request(uuid,bigint)'
       ) is not null as confirm_function,
+      to_regprocedure(
+        'public.get_published_accommodation_map()'
+      ) is not null as accommodation_map_function,
       not has_schema_privilege(
         current_user,
         'public',
@@ -104,6 +107,7 @@ try {
     verification.role !== "booking_app"
     || verification.unit_count !== 9
     || !verification.confirm_function
+    || !verification.accommodation_map_function
     || !verification.ddl_blocked
   ) {
     throw new Error("Runtime role verification failed");

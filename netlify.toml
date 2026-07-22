@@ -49,6 +49,30 @@
   force = true
 
 [[redirects]]
+  from = "/api/accommodation-map"
+  to = "/.netlify/functions/accommodation-map"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/admin/accommodation-map/session"
+  to = "/.netlify/functions/admin-accommodation-map-session"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/admin/accommodation-map/draft"
+  to = "/.netlify/functions/admin-accommodation-map-draft"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/admin/accommodation-map/publish"
+  to = "/.netlify/functions/admin-accommodation-map-publish"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
