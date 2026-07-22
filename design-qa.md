@@ -8,7 +8,8 @@
 - `/admin/accommodation-map` is protected by a short-lived HttpOnly, Secure, SameSite=Strict signed session. Only site-relative image paths are accepted; the editor has draft and atomic publish actions and does not upload files.
 - Native `scroll-snap-type: y proximity` is enabled only above 700 px with normal scroll interruption. It is disabled for reduced motion and while the booking dialog locks the page.
 - Automated verification: 121 tests passed; production build passed; `git diff --check` passed.
-- Remaining release checks: apply the additive Neon migration with the database-owner role, set the two editor-only Netlify secrets, publish a real plan/photo set, then run visual QA against the deployed URL. The embedded browser cannot reach the Windows loopback preview despite the local Vite server listening on `127.0.0.1:5173`.
+- Production release completed on 22 July 2026: the Neon booking, trip-routing and map schemas are live; the restricted `booking_app` role has function-only map access; Netlify holds the editor-only secrets and runtime database connection. Live smoke checks returned `200` for availability and the unpublished map API, while the private editor accepted a signed session and was logged out after verification.
+- The next content step is deliberately manual: add a licensed territory plan and house photographs under `/public/images`, save them as a draft at `/admin/accommodation-map`, then publish. Until then the guest stay section retains its existing accommodation presentation.
 
 ## Цель и доказательства
 
