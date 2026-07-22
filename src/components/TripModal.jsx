@@ -49,13 +49,7 @@ async function postJson(url, payload) {
   return result;
 }
 
-export function TripModal({
-  open,
-  initialView = "trip",
-  initialStayId = "hotel-room",
-  initialUnitIds = [],
-  onClose,
-}) {
+export function TripModal({ open, initialView = "trip", initialStayId = "hotel-room", onClose }) {
   const [view, setView] = useState(initialView);
   const [sent, setSent] = useState(false);
   const [sentKind, setSentKind] = useState("trip");
@@ -282,7 +276,6 @@ export function TripModal({
             >
               <BookingPage
                 initialStayId={initialStayId}
-                initialUnitIds={initialUnitIds}
                 onSubmit={handleBookingSubmit}
                 isSubmitting={isSubmitting}
                 submitError={submitError}

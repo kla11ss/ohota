@@ -58,22 +58,6 @@ function mapTransitionRow(row) {
   };
 }
 
-function mapAccommodationMapConfig(value) {
-  if (value === null || value === undefined) return null;
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return null;
-    }
-  }
-  return value;
-}
-
-function cloneMapConfig(value) {
-  return value ? structuredClone(value) : null;
-}
-
 export function createPostgresBookingRepository(sql) {
   if (typeof sql !== "function") {
     throw new TypeError("A postgres.js sql client is required");
@@ -97,28 +81,6 @@ export function createPostgresBookingRepository(sql) {
   }
 
   return {
-    async getPublishedAccommodationMap() {
-      const rows = await sql`select public.get_published_accommodation_map() as config`;
-      return mapAccommodationMapConfig(rows[0]?.config);
-    },
-
-    async getAccommodationMapDraft() {
-      const rows = await sql`select public.get_accommodation_map_draft() as config`;
-      return mapAccommodationMapConfig(rows[0]?.config);
-    },
-
-    async saveAccommodationMapDraft(config) {
-      const rows = await sql`
-        select public.save_accommodation_map_draft(${JSON.stringify(config)}::jsonb) as config
-      `;
-      return mapAccommodationMapConfig(rows[0]?.config);
-    },
-
-    async publishAccommodationMap() {
-      const rows = await sql`select public.publish_accommodation_map() as config`;
-      return mapAccommodationMapConfig(rows[0]?.config);
-    },
-
     async getRequestByRequestKey(requestKey) {
       const rows = await sql`
         select * from public.booking_requests where request_key = ${requestKey} limit 1
@@ -449,8 +411,6 @@ export function createMemoryBookingRepository(options = {}) {
   const telegramUpdates = new Map();
   const tripRoutes = new Map();
   const rateLimits = new Map();
-  let accommodationMapDraft = cloneMapConfig(options.accommodationMapDraft ?? null);
-  let accommodationMapPublished = cloneMapConfig(options.accommodationMapPublished ?? null);
   const now = typeof options.now === "function" ? options.now : Date.now;
   const rateLimitRetentionSeconds = Number.isInteger(options.rateLimitRetentionSeconds)
     ? options.rateLimitRetentionSeconds
@@ -497,25 +457,6 @@ export function createMemoryBookingRepository(options = {}) {
   }
 
   return {
-    async getPublishedAccommodationMap() {
-      return cloneMapConfig(accommodationMapPublished);
-    },
-
-    async getAccommodationMapDraft() {
-      return cloneMapConfig(accommodationMapDraft);
-    },
-
-    async saveAccommodationMapDraft(config) {
-      accommodationMapDraft = cloneMapConfig(config);
-      return cloneMapConfig(accommodationMapDraft);
-    },
-
-    async publishAccommodationMap() {
-      if (!accommodationMapDraft) throw new Error("ACCOMMODATION_MAP_DRAFT_MISSING");
-      accommodationMapPublished = cloneMapConfig(accommodationMapDraft);
-      return cloneMapConfig(accommodationMapPublished);
-    },
-
     async getRequestByRequestKey(requestKey) {
       const requestId = requestKeys.get(requestKey);
       return clone(requestId ? requests.get(requestId) : null);

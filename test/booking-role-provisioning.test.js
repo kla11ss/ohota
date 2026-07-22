@@ -14,10 +14,6 @@ const TRIP_ROUTING_MIGRATION_SQL = readFileSync(
   new URL("../supabase/migrations/202607220001_trip_review_routing.sql", import.meta.url),
   "utf8",
 );
-const ACCOMMODATION_MAP_MIGRATION_SQL = readFileSync(
-  new URL("../supabase/migrations/202607220002_accommodation_map.sql", import.meta.url),
-  "utf8",
-);
 const REPOSITORY_SOURCE = readFileSync(
   new URL("../server/booking-database.js", import.meta.url),
   "utf8",
@@ -165,21 +161,6 @@ test("trip routing mutations are SECURITY DEFINER only with no runtime table acc
   assert.doesNotMatch(
     ROLE_SQL,
     /grant\s+(?:select|insert|update|delete|truncate)[\s\S]{0,80}on\s+public\.telegram_trip_routes\s+to\s+booking_app/i,
-  );
-});
-
-test("accommodation map keeps draft and published values behind SECURITY DEFINER functions", () => {
-  assert.match(ACCOMMODATION_MAP_MIGRATION_SQL, /create table public\.accommodation_map_config/i);
-  assert.match(ACCOMMODATION_MAP_MIGRATION_SQL, /draft jsonb/i);
-  assert.match(ACCOMMODATION_MAP_MIGRATION_SQL, /published jsonb/i);
-  assert.match(ACCOMMODATION_MAP_MIGRATION_SQL, /set published = config\.draft/i);
-  assert.match(ACCOMMODATION_MAP_MIGRATION_SQL, /function public\.get_published_accommodation_map\(\)[\s\S]+?security definer/i);
-  assert.match(ACCOMMODATION_MAP_MIGRATION_SQL, /function public\.save_accommodation_map_draft\(p_config jsonb\)[\s\S]+?security definer/i);
-  assert.match(ROLE_SQL, /grant execute on function public\.publish_accommodation_map\(\) to booking_app/i);
-  assert.match(ROLE_SQL, /has_table_privilege\('booking_app', 'public\.accommodation_map_config', 'SELECT'\)/i);
-  assert.doesNotMatch(
-    ROLE_SQL,
-    /grant\s+(?:select|insert|update|delete|truncate)[\s\S]{0,100}on\s+public\.accommodation_map_config\s+to\s+booking_app/i,
   );
 });
 

@@ -1,16 +1,5 @@
 # Design QA — бронирование размещения
 
-## Accommodation map and soft snap scroll — 22 July 2026
-
-- The public stay section continues to use the existing accommodation presentation until an owner publishes a prepared territory plan. It never exposes an unfinished editor draft to guests.
-- A published plan supports four synchronized markers: hotel rooms, cottage, hunter house No. 1 and hunter house No. 2. The shared hunter-house option highlights both markers; selecting an individual house preselects it for booking.
-- Desktop keeps the visible accommodation list; mobile uses an equivalent native selector. Map controls are keyboard-accessible and use responsive image coordinates, so markers retain their intended positions across sizes.
-- `/admin/accommodation-map` is protected by a short-lived HttpOnly, Secure, SameSite=Strict signed session. Only site-relative image paths are accepted; the editor has draft and atomic publish actions and does not upload files.
-- Native `scroll-snap-type: y proximity` is enabled only above 700 px with normal scroll interruption. It is disabled for reduced motion and while the booking dialog locks the page.
-- Automated verification: 121 tests passed; production build passed; `git diff --check` passed.
-- Production release completed on 22 July 2026: the Neon booking, trip-routing and map schemas are live; the restricted `booking_app` role has function-only map access; Netlify holds the editor-only secrets and runtime database connection. Live smoke checks returned `200` for availability and the unpublished map API, while the private editor accepted a signed session and was logged out after verification.
-- The next content step is deliberately manual: add a licensed territory plan and house photographs under `/public/images`, save them as a draft at `/admin/accommodation-map`, then publish. Until then the guest stay section retains its existing accommodation presentation.
-
 ## Цель и доказательства
 
 - Source visual truth: переданный пользователем референсный скриншот и механика `https://yuhro.ru/uslugi/rybalka`.

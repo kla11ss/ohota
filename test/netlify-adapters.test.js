@@ -5,10 +5,6 @@ import { readFileSync } from "node:fs";
 import { createNetlifyFunction } from "../netlify/adapter.mjs";
 import availabilityFunction from "../netlify/functions/availability.mjs";
 import availabilityCheckFunction from "../netlify/functions/availability-check.mjs";
-import accommodationMapFunction from "../netlify/functions/accommodation-map.mjs";
-import accommodationMapDraftFunction from "../netlify/functions/admin-accommodation-map-draft.mjs";
-import accommodationMapPublishFunction from "../netlify/functions/admin-accommodation-map-publish.mjs";
-import accommodationMapSessionFunction from "../netlify/functions/admin-accommodation-map-session.mjs";
 import bookingRequestFunction from "../netlify/functions/booking-request.mjs";
 import telegramWebhookFunction from "../netlify/functions/telegram-webhook.mjs";
 import tripRequestFunction from "../netlify/functions/trip-request.mjs";
@@ -32,10 +28,6 @@ test("Netlify config builds with Node 22, publishes dist, and keeps API rewrites
     ["/api/availability", "/.netlify/functions/availability"],
     ["/api/telegram-webhook", "/.netlify/functions/telegram-webhook"],
     ["/api/trip-request", "/.netlify/functions/trip-request"],
-    ["/api/accommodation-map", "/.netlify/functions/accommodation-map"],
-    ["/api/admin/accommodation-map/session", "/.netlify/functions/admin-accommodation-map-session"],
-    ["/api/admin/accommodation-map/draft", "/.netlify/functions/admin-accommodation-map-draft"],
-    ["/api/admin/accommodation-map/publish", "/.netlify/functions/admin-accommodation-map-publish"],
   ]);
   const spaIndex = NETLIFY_CONFIG.lastIndexOf('from = "/*"');
   assert.notEqual(spaIndex, -1);
@@ -109,33 +101,6 @@ test("Netlify functions preserve API methods, query validation, and no-store res
   ), { ip: "203.0.113.9" });
   assert.equal(invalidQuery.status, 400);
   assert.equal(invalidQuery.headers.get("cache-control"), "no-store");
-
-  const publicMapMethod = await accommodationMapFunction(new Request(
-    "https://example.net/api/accommodation-map",
-    { method: "POST" },
-  ), { ip: "203.0.113.9" });
-  assert.equal(publicMapMethod.status, 405);
-  assert.equal(publicMapMethod.headers.get("allow"), "GET");
-  assert.equal(publicMapMethod.headers.get("cache-control"), "no-store");
-
-  const adminMethodChecks = [
-    [accommodationMapDraftFunction, "POST", "GET, PUT"],
-    [accommodationMapPublishFunction, "GET", "POST"],
-  ];
-  for (const [handler, method, allowed] of adminMethodChecks) {
-    const result = await handler(new Request("https://example.net/api/admin/accommodation-map/test", { method }), {
-      ip: "203.0.113.9",
-    });
-    assert.equal(result.status, 405);
-    assert.equal(result.headers.get("allow"), allowed);
-    assert.equal(result.headers.get("cache-control"), "no-store");
-  }
-
-  const sessionNotConfigured = await accommodationMapSessionFunction(new Request(
-    "https://example.net/api/admin/accommodation-map/session",
-  ), { ip: "203.0.113.9" });
-  assert.equal(sessionNotConfigured.status, 503);
-  assert.equal(sessionNotConfigured.headers.get("cache-control"), "no-store");
 
   const postOnlyFunctions = [
     bookingRequestFunction,
