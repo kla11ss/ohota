@@ -64,9 +64,24 @@ export function App() {
       window.addEventListener("hashchange", updateFromPosition);
     };
 
+    const scrollToInitialHashTarget = () => {
+      const rawTargetId = window.location.hash.slice(1);
+      if (!rawTargetId) return;
+
+      let targetId = rawTargetId;
+      try {
+        targetId = decodeURIComponent(rawTargetId);
+      } catch {
+        // Keep the literal hash for malformed percent-encoding.
+      }
+
+      document.getElementById(targetId)?.scrollIntoView();
+    };
+
     const startsAtSectionHash = window.location.hash !== "" && window.location.hash !== "#top";
     if (startsAtSectionHash) {
       firstFrame = window.requestAnimationFrame(() => {
+        scrollToInitialHashTarget();
         secondFrame = window.requestAnimationFrame(startTracking);
       });
     } else {
